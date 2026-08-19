@@ -1,0 +1,13 @@
+name: My First CI Pipeline
+
+on: push
+
+jobs:
+  run-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run the app
+        run: bash app.sh
