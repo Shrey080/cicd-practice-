@@ -3,17 +3,31 @@ name: My First CI Pipeline
 on: push
 
 jobs:
-  run-app:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run the app
-        run: bash app.sh
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: docker build -t my-cicd-app .
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/cicd-app:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/cicd-app:latest
 
-      - name: Run the container
-        run: docker run my-cicd-app
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cicd-app:latest
+            docker stop cicd-app || true
+            docker rm cicd-app || true
+            docker run -d --name cicd-app ${{ secrets.DOCKERHUB_USERNAME }}/cicd-app:latest
